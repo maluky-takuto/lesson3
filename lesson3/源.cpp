@@ -8,6 +8,10 @@ using namespace std;
 
 class node;//先标志一下
 
+int dirx[5] = { 0,1,0,-1,0 };
+
+int diry[5] = { 0,0,1,0,-1 };
+
 //→↓←↑
 string s[4] = { "\u2192","\u2193","\u2190","\u2191" };
 
@@ -42,12 +46,16 @@ public:
 
 	bool shot();
 
-	node* next();//调整位置写到外面
+	void next(int& x, int& y);//调整位置写到外面
 };
 
 //地图
-node* map[102][102] = {};
+node* map[1020][1020] = {};
 //0表示路径，1表示入口，2表示出口，-1表示边界
+
+int l;
+int w;//表示地图的长和宽
+int sum = 0;//表示解数
 
 bool node::shot() {//只是先看看当前位置能不能通过
 	if (map[this->y][this->x]->state != -1 && map[this->y][this->x]->visited == 0)
@@ -55,25 +63,26 @@ bool node::shot() {//只是先看看当前位置能不能通过
 	return false;
 }
 
-node* node::next() {
+void node::next(int& x, int& y) {
 	switch (dir) {
 	case 1:
-		return map[this->y][this->x + 1];
+		x++;
 		break;
 	case 2:
-		return map[this->y + 1][this->x];
+		y++;
 		break;
 	case 3:
-		return map[this->y][this->x - 1];
+		x--;
 		break;
 	case 4:
-		return map[this->y - 1][this->x];
+		y--;
 		break;
 	default:
-		return nullptr;
+		return;
 		break;
 	}
 }
+
 //使用一个栈来保存，走过的节点序列
 class stack {//练习顺序栈
 public:
@@ -83,7 +92,7 @@ public:
 	//初始化栈空间
 	void init() {
 		base = (node*)malloc(1000 * sizeof(node));//假设100的大小
-		if (!base)exit(OVERFLOW);
+		if (!base)return;
 		top = base;
 		size = 1000;
 	}
@@ -91,6 +100,13 @@ public:
 		if (!base)return;
 		delete base;
 		return;
+	}
+
+	//清空栈
+	void clear() {
+		while (!this->isempty()) {
+			this->pop();
+		}
 	}
 
 	//判断空栈，有问题
@@ -102,6 +118,13 @@ public:
 		//不做容量判断了
 		*top++ = e;
 		//需要：改变一下状态
+		return;
+	}
+
+	//不返回，弹出
+	void pop() {
+		if (isempty())return;
+		--top;
 		return;
 	}
 
@@ -184,52 +207,81 @@ static void printmap(int length, int width) {
 	}
 }
 
-//核心功能函数
-static void fun(node* start, node* end) {
-	sq->init();//初始化一个空栈sq
-	node* curpos = start;//当前位置
-	node* e = new node();//这个用来返回弹出值
-	do {
-		//如果当前位置可以通过
-		if (curpos->shot()) {//当前位置可以走
-			curpos->visited = 1;//留下足迹
-			//入栈+改一下状态
-			curpos->an = true;
-			sq->push(*curpos);
-			//如果找到
-			if (curpos->state == 2) {//说明找到
-				return;
-			}
-			curpos = curpos->next();
-		}
-		else {//当前位置不能通过
-			if (!sq->isempty()) {//栈不空，出栈
-				e->an = false;
-				sq->pop(*e);
+static void walk(int x, int y) {
+	//结束条件
+	if (x == l && y == w) {
+		for (int i = 0; i < 100; i++) {
+			if (arry[i] == nullptr) {
+				arry[i] = sq;
 
-				while (e->dir >= 4 && !sq->isempty()) {
-					e->state = -2;
-
-					e->an = false;
-					sq->pop(*e);//再看下一个行不行
-				}//一直到行的那个
-				if (e->dir < 4) {
-					e->dir++;
-					map[e->y][e->x]->dir++;//保持同步
-
-					e->an = true;
-					sq->push(*e);
-
-					curpos = e->next();
-				}
+				break;
 			}
 		}
-	} while (!sq->isempty());//栈不空
+		sum++;
+		return;
+	}
+
+	//判断四个方向
+	for (int i = 1; i <= 4; i++, map[y][x]->dir++) {
+		if (map[y + diry[i]][x + dirx[i]]->visited == 0 && map[y + diry[i]][x + dirx[i]]->state != -1) {//改成要去的位置
+			map[y][x]->visited = 1;
+
+			//入栈
+
+			sq->push(*map[y][x]);//入的是当前位置
+
+			walk(x + dirx[i], y + diry[i]);//不能直接改x,y的值
+			map[y][x]->visited = 0;
+		}
+	}
 }
 
+////核心功能函数
+//static void fun(node* start, node* end) {
+//	sq->init();//初始化一个空栈sq
+//	node* curpos = start;//当前位置
+//	node* e = new node();//这个用来返回弹出值
+//	do {
+//		//如果当前位置可以通过
+//		if (curpos->shot()) {//当前位置可以走
+//			curpos->visited = 1;//留下足迹
+//			//入栈+改一下状态
+//			curpos->an = true;
+//			sq->push(*curpos);
+//			//如果找到
+//			if (curpos->state == 2) {//说明找到
+//				return;
+//			}
+//			curpos = curpos->next();
+//		}
+//		else {//当前位置不能通过
+//			if (!sq->isempty()) {//栈不空，出栈
+//				e->an = false;
+//				sq->pop(*e);
+//
+//				while (e->dir >= 4 && !sq->isempty()) {
+//					e->state = -2;
+//
+//					e->an = false;
+//					sq->pop(*e);//再看下一个行不行
+//				}//一直到行的那个
+//				if (e->dir < 4) {
+//					e->dir++;
+//					map[e->y][e->x]->dir++;//保持同步
+//
+//					e->an = true;
+//					sq->push(*e);
+//
+//					curpos = e->next();
+//				}
+//			}
+//		}
+//	} while (!sq->isempty());//栈不空
+//}
+
 int main() {
-	int l;
-	int w;
+	sq->init();//临时栈初始化一下
+
 	cin >> l >> w;
 	setmap(l, w);//初始化地图
 	printmap(l, w);
@@ -247,8 +299,16 @@ int main() {
 		map[y][x]->change_state(-1);
 		printmap(l, w);
 	}
-	fun(map[1][1], map[y][x]);
-	sq->printstack();
-	printmap(l, w);
+	/*fun(map[1][1], map[y][x]);*/
+	walk(1, 1);//从起点开始walk
+
+	for (int i = 0; i < 100; i++) {
+		if (arry[i]) {
+			cout << "第" << i + 1 << "种：" << endl;
+			arry[i]->printstack();
+			cout << endl;
+		}
+	}
+	cout << sum << endl;
 	return 0;
 }
