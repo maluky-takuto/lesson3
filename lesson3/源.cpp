@@ -19,6 +19,7 @@ public:
 	int state;//表示状态：0表示路径，-1表示边界和障碍，-2表示死胡同，1表示入口，2表示出口
 	int dir = 1;//表示方向
 	int visited = 0;//表示是否访问，有用
+	bool an = false;
 
 	node() {
 		x = 0;
@@ -26,6 +27,7 @@ public:
 		state = 0;
 		dir = 1;//方向默认从东开始
 		visited = 0;//默认没有访问
+		an = false;
 	}
 
 	void set(int i, int j, int s) {
@@ -47,58 +49,26 @@ public:
 node* map[102][102] = {};
 //0表示路径，1表示入口，2表示出口，-1表示边界
 
-bool node::shot() {//只是先看看能不能通过
-	switch (dir) {
-	case 1:
-		if (map[this->y][this->x + 1]->state != -1 && map[this->y][this->x + 1]->visited == 0) {
-			return true;
-		}
-		else {
-			return false;
-		}
-		break;
-	case 2:
-		if (map[this->y + 1][this->x]->state != -1 && map[this->y + 1][this->x]->visited == 0) {
-			return true;
-		}
-		else {
-			return false;
-		}
-		break;
-	case 3:
-		if (map[this->y][this->x - 1]->state != -1 && map[this->y][this->x - 1]->visited == 0) {
-			return true;
-		}
-		else {
-			return false;
-		}
-		break;
-	case 4:
-		if (map[this->y - 1][this->x]->state != -1 && map[this->y - 1][this->x]->visited == 0) {
-			return true;
-		}
-		else {
-			return false;
-		}
-		break;
-	default:
-		this->state = -2;//四个方向都不行，说明死胡同
-		return false;
-		break;
-	}
+bool node::shot() {//只是先看看当前位置能不能通过
+	if (map[this->y][this->x]->state != -1 && map[this->y][this->x]->visited == 0)
+		return true;
+	return false;
 }
 
 node* node::next() {
 	switch (dir) {
 	case 1:
 		return map[this->y][this->x + 1];
+		break;
 	case 2:
 		return map[this->y + 1][this->x];
-
+		break;
 	case 3:
 		return map[this->y][this->x - 1];
+		break;
 	case 4:
 		return map[this->y - 1][this->x];
+		break;
 	default:
 		return nullptr;
 		break;
@@ -123,15 +93,15 @@ public:
 		return;
 	}
 
-	//判断空栈
+	//判断空栈，有问题
 	bool isempty() {
-		if (!base)return true;
-		return false;
+		return base == top;
 	}
 
 	void push(node e) {
 		//不做容量判断了
 		*top++ = e;
+		//需要：改变一下状态
 		return;
 	}
 
@@ -140,11 +110,12 @@ public:
 		e = *--top;
 		return;
 	}
+
 	void printstack() {
-		node* e = new node();
-		while (!this->isempty()) {
-			this->pop(*e);
-			cout << "(" << e->x << "," << e->y << "," << s[e->dir] << ")" << endl;
+		node* e = this->base;
+		while (e != this->top) {
+			cout << "(" << e->x << "," << e->y << "," << s[e->dir - 1] << ")" << endl;
+			e++;
 		}
 	}
 };
@@ -174,12 +145,12 @@ static void setmap(int length, int width) {
 	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < length; j++) {
 			map[i + 1][j + 1] = new node();
-			map[i + 1][j + 1]->set(i + 1, j + 1, 0);
+			map[i + 1][j + 1]->set(j + 1, i + 1, 0);
 		}
 	}
 
 	map[1][1]->set(1, 1, 1);//设置入口
-	map[width][length]->set(width, length, 2);//出口
+	map[width][length]->set(length, width, 2);//出口
 }
 
 //打印地图
@@ -192,7 +163,12 @@ static void printmap(int length, int width) {
 				cout << setw(2) << "#";
 				break;
 			case 0:
-				cout << setw(2) << " ";
+				if (map[i][j]->an) {
+					cout << setw(2) << s[map[i][j]->dir - 1];//路径解
+				}
+				else {
+					cout << setw(2) << " ";//路径
+				}
 				break;
 			case 1:
 				cout << setw(2) << "*";
@@ -215,27 +191,35 @@ static void fun(node* start, node* end) {
 	node* e = new node();//这个用来返回弹出值
 	do {
 		//如果当前位置可以通过
-		if (curpos->shot()) {//要去的那个位置可以走
+		if (curpos->shot()) {//当前位置可以走
 			curpos->visited = 1;//留下足迹
-			//入栈
+			//入栈+改一下状态
+			curpos->an = true;
 			sq->push(*curpos);
-
-			//如果找到，，，，，，，，，
-			if (curpos == end) {
+			//如果找到
+			if (curpos->state == 2) {//说明找到
 				return;
 			}
 			curpos = curpos->next();
 		}
 		else {//当前位置不能通过
 			if (!sq->isempty()) {//栈不空，出栈
+				e->an = false;
 				sq->pop(*e);
+
 				while (e->dir >= 4 && !sq->isempty()) {
 					e->state = -2;
+
+					e->an = false;
 					sq->pop(*e);//再看下一个行不行
 				}//一直到行的那个
 				if (e->dir < 4) {
 					e->dir++;
+					map[e->y][e->x]->dir++;//保持同步
+
+					e->an = true;
 					sq->push(*e);
+
 					curpos = e->next();
 				}
 			}
@@ -244,8 +228,11 @@ static void fun(node* start, node* end) {
 }
 
 int main() {
-	setmap(10, 8);//初始化地图
-	printmap(10, 8);
+	int l;
+	int w;
+	cin >> l >> w;
+	setmap(l, w);//初始化地图
+	printmap(l, w);
 	//输入障碍的坐标
 	int x;
 	int y;
@@ -258,8 +245,10 @@ int main() {
 			break;
 		}
 		map[y][x]->change_state(-1);
-		printmap(10, 8);
+		printmap(l, w);
 	}
 	fun(map[1][1], map[y][x]);
 	sq->printstack();
+	printmap(l, w);
+	return 0;
 }
