@@ -89,13 +89,15 @@ public:
 	node* top;
 	node* base;
 	int size;
+
 	//初始化栈空间
-	void init() {
-		base = (node*)malloc(1000 * sizeof(node));//假设100的大小
+	stack() {
+		base = (node*)malloc(1000 * sizeof(node));//假设1000的大小
 		if (!base)return;
 		top = base;
 		size = 1000;
 	}
+
 	void destroy() {
 		if (!base)return;
 		delete base;
@@ -141,11 +143,19 @@ public:
 			e++;
 		}
 	}
+	//拷贝构造函数
+	void operator=(const stack &s) {
+		node* e = s.base;
+		while (e != s.top) {
+			this->push(*e);
+			e++;
+		}
+	}
 };
 
-stack* arry[100];//建立栈，用来保存序列
+stack arry[100];//建立栈，用来保存序列
 
-stack* sq = new stack;//临时栈
+stack sq;//临时栈
 
 //初始化地图
 static void setmap(int length, int width) {
@@ -207,31 +217,71 @@ static void printmap(int length, int width) {
 	}
 }
 
+//打印解！
+static void printanswer(int length, int width,stack& sq) {
+	node* temp ;
+	bool flag=false;//做一下标记
+	for (int i = 0; i < width + 2; i++) {
+		for (int j = 0; j < length + 2; j++) {
+			switch (map[i][j]->state) {
+			case -1:
+				cout << setw(2) << "#";
+				break;
+			case 0:
+				temp = sq.base;//初始条件，，就和for循环一样
+				//检索栈！
+				while (temp != sq.top) {
+					if (temp->x == j && temp->y == i) {
+						cout << setw(2) <<"\033[1;31m" << s[temp->dir - 1]<<"\033[0m";
+						flag = true;
+						temp = sq.base;//从头开始检索
+						break;
+					}
+					temp++;
+				}
+				if (!flag)cout << setw(2) << " ";
+				flag = false;
+				break;
+			case 1:
+				cout << setw(2) << "*";
+				break;
+			case 2:
+				cout << setw(2) << "@";
+				break;
+			default:
+				break;
+			}
+		}
+		cout << endl;
+	}
+}
+
 static void walk(int x, int y) {
 	//结束条件
 	if (x == l && y == w) {
 		for (int i = 0; i < 100; i++) {
-			if (arry[i] == nullptr) {
+			if (arry[i].isempty()) {
 				arry[i] = sq;
-
 				break;
 			}
-		}
+		}//保存到栈里面
 		sum++;
 		return;
 	}
 
 	//判断四个方向
-	for (int i = 1; i <= 4; i++, map[y][x]->dir++) {
+	for (int i = 1; i <= 4; i++) {
 		if (map[y + diry[i]][x + dirx[i]]->visited == 0 && map[y + diry[i]][x + dirx[i]]->state != -1) {//改成要去的位置
 			map[y][x]->visited = 1;
 
 			//入栈
-
-			sq->push(*map[y][x]);//入的是当前位置
+			map[y][x]->dir = i;//不要直接改变dir的值
+			sq.push(*map[y][x]);//入的是当前位置
 
 			walk(x + dirx[i], y + diry[i]);//不能直接改x,y的值
-			map[y][x]->visited = 0;
+
+ 			map[y][x]->visited = 0;//还原位置，很重要，尝试出栈
+			sq.pop();//不返回直接弹出
 		}
 	}
 }
@@ -280,7 +330,6 @@ static void walk(int x, int y) {
 //}
 
 int main() {
-	sq->init();//临时栈初始化一下
 
 	cin >> l >> w;
 	setmap(l, w);//初始化地图
@@ -303,9 +352,11 @@ int main() {
 	walk(1, 1);//从起点开始walk
 
 	for (int i = 0; i < 100; i++) {
-		if (arry[i]) {
+		if (!arry[i].isempty()) {//不空
 			cout << "第" << i + 1 << "种：" << endl;
-			arry[i]->printstack();
+			arry[i].printstack();
+			cout << endl;
+			printanswer(l, w, arry[i]);
 			cout << endl;
 		}
 	}
