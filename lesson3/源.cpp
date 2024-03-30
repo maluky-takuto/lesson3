@@ -330,12 +330,11 @@ static void walk(int x, int y) {
 //}
 
 int main() {
-	cout << "输入地图长宽" << endl;
+
 	cin >> l >> w;
 	setmap(l, w);//初始化地图
 	printmap(l, w);
 	//输入障碍的坐标
-	cout << "输入障碍坐标，按q结束" << endl;
 	int x;
 	int y;
 	while (true) {
@@ -361,6 +360,6 @@ int main() {
 			cout << endl;
 		}
 	}
-	cout << "总解："<<sum << endl;
+	cout << sum << endl;
 	return 0;
 }
